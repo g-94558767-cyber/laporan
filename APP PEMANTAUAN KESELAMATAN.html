@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Laporan Keselamatan SKTBT</title>
+    <style>
+        /* CSS UNTUK PAPARAN APP (SCREEN) */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .no-print-zone {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .app-header img { height: 70px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group { display: flex; flex-direction: column; margin-bottom: 10px; }
+        label { font-weight: bold; font-size: 13px; margin-bottom: 5px; }
+        input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .location-list {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .upload-box {
+            border: 1px dashed #aaa;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .btn-jana {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        /* CSS KHAS UNTUK PDF/CETAKAN */
+        #report-pdf {
+            display: none; /* Sorok dalam app, tunjuk masa cetak sahaja */
+            width: 100%;
+            background: white;
+        }
+
+        @media print {
+            .no-print-zone { display: none !important; }
+            #report-pdf { display: block !important; }
+            
+            @page {
+                size: A4;
+                margin: 0.5cm;
+            }
+
+            body { background: white; padding: 0; }
+        }
+
+        /* Rekabentuk Laporan Profesional */
+        .pdf-header {
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid black;
+            padding-bottom: 10px;
+        }
+
+        .pdf-header img { height: 65px; margin-right: 10px; }
+        
+        .pdf-title-box { text-align: left; }
+        .pdf-title-box h2 { margin: 0; font-size: 16pt; }
+        .pdf-title-box p { margin: 0; font-size: 12pt; font-weight: bold; }
+
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 9pt;
+        }
+
+        .pdf-table th, .pdf-table td {
+            border: 1px solid black;
+            padding: 5px;
+            text-align: left;
+        }
+
+        .pdf-table th { background-color: #f2f2f2 !important; }
+
+        .image-grid-pdf {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .image-grid-pdf img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border: 1px solid black;
+        }
+
+        .signature-section {
+            margin-top: 20px;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BAHAGIAN INPUT APP (Akan disorok masa cetak) -->
+    <div class="no-print-zone">
+        <div class="app-header">
+            <img src="https://iili.io/fy9y6AX.png" alt="Logo Sekolah">
+            <img src="https://iili.io/fyH9kbe.png" alt="Logo HEM">
+            <div style="font-weight:bold; font-size:18px;">PEMANTAUAN KESELAMATAN SKTBT</div>
+        </div>
+
+        <div class="form-grid">
+            <div class="input-group">
+                <label>Tarikh</label>
+                <input type="date" id="in_date">
+            </div>
+            <div class="input-group">
+                <label>Masa</label>
+                <input type="time" id="in_time">
+            </div>
+        </div>
+
+        <div class="location-list" id="in_locations">
+            <!-- Lokasi dijana oleh JS -->
+        </div>
+
+        <div class="input-group">
+            <label>Catatan Tambahan</label>
+            <textarea id="in_note" rows="3"></textarea>
+        </div>
+
+        <div class="form-grid" style="margin-top:15px;">
+            <div class="input-group">
+                <label>Nama Pemantau</label>
+                <input type="text" id="in_name" placeholder="NAMA PENUH">
+            </div>
+            <div class="input-group">
+                <label>Jawatan</label>
+                <input type="text" id="in_post" placeholder="JAWATAN">
+            </div>
+        </div>
+
+        <label>Muat Naik Gambar (Maks 6)</label>
+        <div class="upload-grid">
+            <script>
+                for(let i=1; i<=6; i++) {
+                    document.write(`
+                        <div class="upload-box">
+                            Gambar ${i}
+                            <input type="file" accept="image/*" onchange="preview(this, ${i})">
+                            <img id="img_prev${i}" class="preview-img">
+                        </div>
+                    `);
+                }
+            </script>
+        </div>
+
+        <button class="btn-jana" onclick="generateReport()">JANA PDF</button>
+    </div>
+
+    <!-- BAHAGIAN LAPORAN (Hanya nampak dalam PDF/Cetak) -->
+    <div id="report-pdf">
+        <div class="pdf-header">
+            <img src="https://iili.io/fy9y6AX.png">
+            <img src="https://iili.io/fyH9kbe.png">
+            <div class="pdf-title-box">
+                <p>PEMANTAUAN KESELAMATAN SK TAMAN BUKIT TIRAM</p>
+                <p style="font-weight:normal; font-size:10pt; text-decoration: underline;">Laporan Pemantauan Keselamatan SK Taman Bukit Tiram</p>
+            </div>
+        </div>
+
+        <table class="pdf-table">
+            <tr>
+                <th width="15%">TARIKH</th>
+                <td width="35%" id="out_date"></td>
+                <th width="15%">MASA</th>
+                <td width="35%" id="out_time"></td>
+            </tr>
+        </table>
+
+        <table class="pdf-table">
+            <thead>
+                <tr>
+                    <th width="50%">KAWASAN / LOKASI</th>
+                    <th width="50%">STATUS</th>
+                </tr>
+            </thead>
+            <tbody id="out_table_body"></tbody>
+        </table>
+
+        <table class="pdf-table">
+            <tr><th style="background:#f2f2f2">CATATAN</th></tr>
+            <tr><td id="out_note" style="height:40px; vertical-align:top;"></td></tr>
+        </table>
+
+        <div class="image-grid-pdf" id="out_images"></div>
+
+        <div class="signature-section">
+            <p>Disediakan oleh:</p>
+            <br><br>
+            <p>__________________________<br>
+            <strong id="out_name"></strong><br>
+            <span id="out_post"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const areas = [
+            "BAHAGIAN HADAPAN FOYER", "LALUAN BELAKANG BILIK DISIPLIN", "BELAKANG BENGKEL RBT",
+            "HADAPAN KUATERS", "KANTIN", "KAWASAN SEKITAR KANTIN", "PADANG", "GELANGGANG",
+            "BANGUNAN PRA DAN SEKITAR", "BLOK PEJABAT", "BLOK BILIK MUZIK", "BLOK TIARA HALL",
+            "BLOK MAKMAL SAINS", "BLOK PUSAT SUMBER", "BLOK SURAU"
+        ];
+
+        // Jana senarai input lokasi
+        const locContainer = document.getElementById('in_locations');
+        areas.forEach(area => {
+            locContainer.innerHTML += `
+                <div class="location-item">
+                    <span style="font-size:13px">${area}</span>
+                    <select class="loc-status" data-area="${area}">
+                        <option value="Selamat & terkawal">Selamat & terkawal</option>
+                        <option value="Tidak Selamat">Tidak Selamat</option>
+                        <option value="Perlu tindakan segera">Perlu tindakan segera</option>
+                    </select>
+                </div>
+            `;
+        });
+
+        const imageFiles = {};
+
+        function preview(input, id) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('img_prev' + id);
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    imageFiles[id] = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function generateReport() {
+            // Pindahkan data ke bahagian laporan
+            document.getElementById('out_date').innerText = document.getElementById('in_date').value;
+            document.getElementById('out_time').innerText = document.getElementById('in_time').value;
+            document.getElementById('out_note').innerText = document.getElementById('in_note').value;
+            document.getElementById('out_name').innerText = document.getElementById('in_name').value.toUpperCase();
+            document.getElementById('out_post').innerText = document.getElementById('in_post').value.toUpperCase();
+
+            // Bina jadual lokasi
+            const tbody = document.getElementById('out_table_body');
+            tbody.innerHTML = '';
+            document.querySelectorAll('.loc-status').forEach(sel => {
+                const color = sel.value === 'Selamat & terkawal' ? 'black' : 'red';
+                tbody.innerHTML += `<tr><td>${sel.dataset.area}</td><td style="color:${color}">${sel.value}</td></tr>`;
+            });
+
+            // Susun gambar grid 3x2
+            const imgContainer = document.getElementById('out_images');
+            imgContainer.innerHTML = '';
+            for(let i=1; i<=6; i++) {
+                if(imageFiles[i]) {
+                    imgContainer.innerHTML += `<img src="${imageFiles[i]}">`;
+                }
+            }
+
+            // Panggil fungsi cetak pelayar
+            window.print();
+        }
+    </script>
+</body>
+</html>
